@@ -9,6 +9,18 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
+# macOS/Windows system files that should never be collected
+_SYSTEM_FILES: frozenset[str] = frozenset({
+    "Icon\r",       # macOS folder icon (Icon + carriage-return)
+    ".DS_Store",
+    "desktop.ini",
+    "Thumbs.db",
+})
+
+
+def _is_system_file(name: str) -> bool:
+    return name.startswith("._") or name in _SYSTEM_FILES
+
 
 # ---------------------------------------------------------------------------
 # Data classes
@@ -112,7 +124,7 @@ def scan_project(project_dir: Path, overwrite: bool = False) -> ProjectScan:
         pm_dir=project_dir / f"PM_{project_dir.name}",
     )
 
-    prprojs = [p for p in project_dir.glob("*.prproj") if not p.name.startswith("._")]
+    prprojs = [p for p in project_dir.glob("*.prproj") if not _is_system_file(p.name)]
     if not prprojs:
         scan.status = "no_prproj"
         return scan
@@ -133,7 +145,7 @@ def scan_project(project_dir: Path, overwrite: bool = False) -> ProjectScan:
     if final_dir.is_dir():
         scan.final_files = [
             f for f in final_dir.rglob("*")
-            if f.is_file() and not f.name.startswith("._")
+            if f.is_file() and not _is_system_file(f.name)
         ]
 
     return scan
@@ -165,7 +177,7 @@ def process_project(
     result = ProjectResult(project_name=project_dir.name, status="ok")
 
     # ── Find .prproj ──────────────────────────────────────────────────────
-    prprojs = [p for p in project_dir.glob("*.prproj") if not p.name.startswith("._")]
+    prprojs = [p for p in project_dir.glob("*.prproj") if not _is_system_file(p.name)]
     if not prprojs:
         result.status = "skipped_no_prproj"
         emit("skip", "No .prproj file found")
@@ -234,7 +246,7 @@ def process_project(
     if final_src.is_dir():
         final_files = [
             f for f in final_src.rglob("*")
-            if f.is_file() and not f.name.startswith("._")
+            if f.is_file() and not _is_system_file(f.name)
         ]
         skipped_final = 0
         for f in final_files:
