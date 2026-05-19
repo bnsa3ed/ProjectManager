@@ -4,6 +4,12 @@
 
 set -euo pipefail
 
+# Prevent Homebrew from doing git-based auto-updates that read from stdin,
+# which would consume the remaining bytes of the curl | bash pipe.
+export HOMEBREW_NO_AUTO_UPDATE=1
+export HOMEBREW_NO_INSTALL_CLEANUP=1
+export HOMEBREW_NO_ENV_HINTS=1
+
 BOLD=$(tput bold   2>/dev/null || printf '')
 RESET=$(tput sgr0  2>/dev/null || printf '')
 GREEN=$(tput setaf 2 2>/dev/null || printf '')
@@ -80,14 +86,14 @@ if ! command -v pipx &>/dev/null; then
 
     if command -v brew &>/dev/null; then
         # Homebrew Python blocks pip system-wide — use brew to install pipx instead
-        brew install pipx --quiet
+        brew install pipx --quiet </dev/null
     else
         python3 -m pip install --user pipx --quiet 2>/dev/null \
             || python3 -m pip install --user pipx --quiet --break-system-packages
     fi
 
     # Ensure pipx's bin dir is on PATH and add it to shell profile
-    python3 -m pipx ensurepath --quiet 2>/dev/null || true
+    python3 -m pipx ensurepath --quiet </dev/null 2>/dev/null || true
 
     # Add common locations to PATH for this session
     export PATH="$PATH:$HOME/.local/bin"
@@ -126,11 +132,11 @@ REPO="git+https://github.com/bnsa3ed/ProjectManager.git"
 
 if pipx list 2>/dev/null | grep -q "prpm"; then
     # shellcheck disable=SC2086
-    pipx install "$REPO" $PIPX_PYTHON_FLAG --force --quiet
+    pipx install "$REPO" $PIPX_PYTHON_FLAG --force --quiet </dev/null
     ACTION="upgraded"
 else
     # shellcheck disable=SC2086
-    pipx install "$REPO" $PIPX_PYTHON_FLAG --quiet
+    pipx install "$REPO" $PIPX_PYTHON_FLAG --quiet </dev/null
     ACTION="installed"
 fi
 
