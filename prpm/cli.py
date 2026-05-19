@@ -14,45 +14,45 @@ from .core import ProjectResult, ProjectScan, process_project, scan_project
 from .errors import check_python_version, check_questionary, run_with_error_handling
 
 
-# ---------------------------------------------------------------------------
-# Terminal design constants
-# ---------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
+# Design tokens  (research: semantic symbols, dim for secondary, no borders)
+# ─────────────────────────────────────────────────────────────────────────────
 
-_LINE = click.style('  ' + '─' * 50, fg='bright_black')
+def _c(text: str, **kw) -> str:
+    return click.style(text, **kw)
+
+OK    = _c("✓", fg="green",        bold=True)
+FAIL  = _c("✗", fg="red",          bold=True)
+WARN  = _c("⚠", fg="yellow",       bold=True)
+SKIP  = _c("○", fg="bright_black")
+ARROW = _c("›", fg="cyan",         bold=True)
+DOT   = _c("·", fg="bright_black")
+
+def _dim(t: str)  -> str: return _c(t, fg="bright_black")
+def _bold(t: str) -> str: return _c(t, bold=True)
+def _green(t: str)-> str: return _c(t, fg="green",  bold=True)
+def _yellow(t: str)->str: return _c(t, fg="yellow", bold=True)
+def _red(t: str)  -> str: return _c(t, fg="red",    bold=True)
+def _cyan(t: str) -> str: return _c(t, fg="cyan",   bold=True)
+
+_RULE = _dim("  " + "─" * 54)
 
 BANNER = (
     "\n"
-    + click.style("  prpm", fg="cyan", bold=True)
-    + click.style("  —  Premiere Project Manager  ", fg="white")
-    + click.style(f"v{__version__}", fg="bright_black")
+    + _c("  prpm", fg="cyan", bold=True)
+    + _c("  —  Premiere Project Manager  ", fg="white")
+    + _dim(f"v{__version__}")
     + "\n"
-    + _LINE
+    + _dim("  " + "─" * 54)
     + "\n"
-    + click.style("  Collect  ·  Archive  ·  Share", fg="bright_black")
+    + _dim("  Collect  ·  Archive  ·  Share")
     + "\n"
 )
 
-DIV   = _LINE
-TICK  = click.style('✓', fg='green')
-CROSS = click.style('✗', fg='red')
-WARN  = click.style('⚠', fg='yellow')
-SKIP  = click.style('○', fg='bright_black')
-ARROW = click.style('→', fg='bright_black')
-DOT   = click.style('·', fg='bright_black')
 
-
-def _h(text: str) -> str:
-    """Bold white heading."""
-    return click.style(text, bold=True)
-
-
-def _dim(text: str) -> str:
-    return click.style(text, fg='bright_black')
-
-
-# ---------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
 # Helpers
-# ---------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
 
 def _find_projects(base_dir: Path) -> list[Path]:
     return sorted(
@@ -79,62 +79,63 @@ def _make_event_handler(verbose: bool) -> tuple[list[str], callable]:
         file_log.info(f"[{level}] {msg}")
 
         if not verbose:
+            # Compact mode: only surface warnings and errors
             if level == "missing":
-                click.echo(f"   {WARN} {click.style('Missing:', fg='yellow')} {Path(msg).name}")
+                click.echo(f"     {WARN} {_yellow('Missing:')} {Path(msg).name}")
             elif level == "error":
-                click.echo(f"   {CROSS} {msg}")
+                click.echo(f"     {FAIL} {msg}")
             return
 
+        # Verbose: one line per file
         if level == "copied":
-            click.echo(f"   {TICK} {msg}")
-        elif level == "would_copy":
-            click.echo(f"   {ARROW} {Path(msg).name}")
+            click.echo(f"     {OK} {msg}")
         elif level == "skipped":
-            click.echo(f"   {SKIP} Skipped: {msg}")
+            click.echo(f"     {SKIP} {_dim('skipped:')} {msg}")
         elif level == "missing":
-            click.echo(f"   {WARN} {click.style('Missing:', fg='yellow')} {Path(msg).name}")
+            click.echo(f"     {WARN} {_yellow('missing:')} {Path(msg).name}")
         elif level == "error":
-            click.echo(f"   {CROSS} {msg}")
-        elif level == "warn":
-            click.echo(f"   {WARN} {msg}")
+            click.echo(f"     {FAIL} {msg}")
+        elif level in ("warn",):
+            click.echo(f"     {WARN} {msg}")
         elif level == "info":
-            click.echo(f"   {DOT} {msg}")
+            click.echo(f"     {DOT} {_dim(msg)}")
 
     return lines, on_event
 
 
-def _print_project_outcome(result: ProjectResult, dry_run: bool) -> None:
+def _print_project_outcome(result: ProjectResult) -> None:
+    """One or two lines summarising the outcome for a single project."""
     if result.status == "skipped_no_prproj":
-        click.echo(f"  {SKIP} {_dim('No .prproj found — skipped')}")
+        click.echo(f"  {SKIP}  {_dim('No .prproj found — skipped')}")
         return
     if result.status == "skipped_exists":
-        click.echo(f"  {SKIP} {_dim('Already collected — skipped')}  "
-                   f"{_dim('(use --overwrite to redo)')}")
+        click.echo(f"  {SKIP}  {_dim('Already collected')}  {_dim('(use --overwrite to redo)')}")
         return
     if result.status == "error":
-        click.echo(f"  {CROSS} {click.style('Could not process this project', fg='red')}")
+        click.echo(f"  {FAIL}  {_red('Could not process this project')}")
         return
 
-    verb = "Would collect" if dry_run else "Collected"
-    parts = [click.style(f"{result.total_copied} file(s)", fg="green", bold=True)]
+    # Build status parts
+    parts: list[str] = [_green(f"{result.total_copied} files collected")]
     if result.missing_on_disk:
-        parts.append(click.style(f"{len(result.missing_on_disk)} missing", fg="yellow", bold=True))
+        parts.append(_yellow(f"{len(result.missing_on_disk)} missing"))
     if result.copy_failed:
-        parts.append(click.style(f"{len(result.copy_failed)} failed", fg="red", bold=True))
+        parts.append(_red(f"{len(result.copy_failed)} failed"))
 
-    click.echo(f"  {TICK} {verb}: {', '.join(parts)}")
+    click.echo(f"  {OK}  " + f"  {DOT}  ".join(parts))
 
-    if result.pm_dir and not dry_run:
+    # Output path on second line
+    if result.pm_dir:
         try:
             rel = result.pm_dir.relative_to(result.pm_dir.parent.parent)
         except ValueError:
             rel = result.pm_dir
-        click.echo(f"  {ARROW} {_dim(str(rel) + '/')}")
+        click.echo(f"     {ARROW}  {_dim(str(rel) + '/')}")
 
 
-# ---------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
 # CLI definition
-# ---------------------------------------------------------------------------
+# ─────────────────────────────────────────────────────────────────────────────
 
 @click.group(
     invoke_without_command=True,
@@ -151,8 +152,8 @@ def cli(ctx: click.Context) -> None:
     \b
     Quick start:
       cd /path/to/your/projects
-      prpm run --preview      ← interactive file picker
-      prpm run                ← collect everything
+      prpm run --preview      ← interactive picker + collect
+      prpm run                ← collect everything immediately
     """
     check_python_version()
     if ctx.invoked_subcommand is None:
@@ -163,13 +164,13 @@ def cli(ctx: click.Context) -> None:
 @cli.command()
 @click.argument("project", required=False, metavar="[PROJECT]")
 @click.option("--preview", "-p", is_flag=True,
-              help="Open interactive file picker — toggle files on/off before collecting.")
+              help="Interactive picker: review projects and files before collecting.")
 @click.option("--overwrite", "-o", is_flag=True,
               help="Re-collect projects that already have a PM_ folder.")
 @click.option("--verbose", "-v", is_flag=True,
               help="Print each file name as it is copied.")
 @click.option("--dir", "-d", "base_dir", default=".", show_default=True, metavar="PATH",
-              help="Folder containing your projects (default: current folder).")
+              help="Folder containing your projects (defaults to current folder).")
 def run(
     project: str | None,
     preview: bool,
@@ -185,46 +186,38 @@ def run(
     Examples:
       prpm run                          collect all projects
       prpm run "My Video"               collect one project
-      prpm run --preview                interactive file picker
+      prpm run --preview                interactive picker before collecting
       prpm run --verbose                show each file being copied
       prpm run --overwrite              redo already-collected projects
       prpm run --dir /path/to/folder    use a specific folder
     """
-    def _run():
+    def _run() -> None:
         base = Path(base_dir).resolve()
         if not base.is_dir():
-            msg = f"'{base}' is not a valid folder."
-            click.echo(f"\n  {CROSS} {click.style(msg, fg='red')}\n")
+            click.echo(f"\n  {FAIL}  {_red(str(base) + ' is not a valid folder.')}\n")
             sys.exit(1)
 
         if project:
             target = base / project
             if not target.is_dir():
-                msg = f"Project '{project}' not found in {base}"
-                click.echo(f"\n  {CROSS} {click.style(msg, fg='red')}\n")
+                click.echo(f"\n  {FAIL}  {_red(f'Project not found: {project}')}\n")
                 sys.exit(1)
             project_dirs = [target]
         else:
             project_dirs = _find_projects(base)
 
         if not project_dirs:
-            click.echo(f"\n  {WARN} No project folders found in {base}\n")
+            click.echo(f"\n  {WARN}  No project folders found in {base}\n")
             return
 
-        # ── Header ───────────────────────────────────────────────────────
+        # ── Banner + context line ────────────────────────────────────────
         click.echo(BANNER)
+        mode_badge = _yellow("PREVIEW") if preview else _green("COLLECT")
+        click.echo(f"  {mode_badge}  {_dim(str(base))}")
 
-        mode_label = (
-            click.style("PREVIEW", fg="yellow", bold=True)
-            if preview
-            else click.style("COLLECT", fg="green", bold=True)
-        )
-        click.echo(f"  {mode_label}  {_dim(str(base))}")
-        click.echo()
-
-        # ── Setup logging ────────────────────────────────────────────────
+        # ── File log ─────────────────────────────────────────────────────
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        log_path = base / f"PM_log_{timestamp}.log"
+        log_path  = base / f"PM_log_{timestamp}.log"
         _setup_file_log(log_path)
 
         # ── Interactive preview ──────────────────────────────────────────
@@ -236,29 +229,31 @@ def run(
 
             from .selector import interactive_select
 
-            click.echo(f"  {DOT} Scanning projects...", nl=False)
+            # Scan phase — shown on one line, overwritten on completion
+            click.echo(f"\n  {DOT}  Scanning {len(project_dirs)} project(s)...", nl=False)
             scans: list[ProjectScan] = [
                 scan_project(d, overwrite=overwrite) for d in project_dirs
             ]
-            click.echo(f"\r  {TICK} Scanning complete.           ")
-            click.echo()
+            found = sum(1 for s in scans if s.status in ("ok", "pm_exists"))
+            click.echo(f"\r  {OK}  {found} project(s) scanned.              ")
 
             selected_paths = interactive_select(scans)
             if selected_paths is None:
                 return  # user cancelled
 
-            click.echo()
-            click.echo(DIV)
-            click.echo(f"  {_h('Collecting selected files...')}")
-            click.echo(DIV)
-            click.echo()
+        # ── Collection header ────────────────────────────────────────────
+        click.echo()
+        click.echo(_RULE)
+        click.echo(f"  {_bold('Collecting')}")
+        click.echo(_RULE)
+        click.echo()
 
-        # ── Collect ──────────────────────────────────────────────────────
+        # ── Per-project collection ────────────────────────────────────────
         results: list[ProjectResult] = []
 
         for project_dir in project_dirs:
-            click.echo(f" {click.style('📂', bold=True)}  {_h(project_dir.name)}")
-            _, on_event = _make_event_handler(verbose or preview)
+            click.echo(f"  {_cyan('❯')}  {_bold(project_dir.name)}")
+            _, on_event = _make_event_handler(verbose)
 
             result = run_with_error_handling(
                 process_project,
@@ -269,57 +264,47 @@ def run(
                 on_event=on_event,
             )
             results.append(result)
-            _print_project_outcome(result, dry_run=False)
+            _print_project_outcome(result)
             click.echo()
 
-        # ── Summary ──────────────────────────────────────────────────────
-        processed   = [r for r in results if r.status == "ok"]
-        skipped     = sum(1 for r in results if r.status != "ok")
-        total_ref   = sum(r.referenced    for r in processed)
-        total_copied = sum(r.total_copied for r in processed)
-        total_missing = sum(len(r.missing_on_disk) for r in processed)
-        total_failed  = sum(len(r.copy_failed)      for r in processed)
-        problems = [r for r in processed if r.has_issues]
+        # ── Final summary ────────────────────────────────────────────────
+        processed      = [r for r in results if r.status == "ok"]
+        skipped        = sum(1 for r in results if r.status != "ok")
+        total_copied   = sum(r.total_copied        for r in processed)
+        total_missing  = sum(len(r.missing_on_disk) for r in processed)
+        total_failed   = sum(len(r.copy_failed)     for r in processed)
+        problems       = [r for r in processed if r.has_issues]
 
-        click.echo(DIV)
-        click.echo(f"  {_h('Results')}")
-        click.echo(DIV)
-        click.echo(f"  Projects processed  {_h(str(len(processed)))}")
+        click.echo(_RULE)
+        click.echo(f"  {_bold('Done')}")
+        click.echo(_RULE)
+        click.echo()
+
+        click.echo(f"  {OK}  {_green(str(total_copied))} files collected"
+                   + (f"   across {_bold(str(len(processed)))} project(s)" if len(processed) > 1 else ""))
         if skipped:
-            click.echo(f"  Projects skipped    {skipped}")
-        click.echo(f"  Files referenced    {total_ref}")
-        click.echo(
-            f"  Files collected     "
-            f"{click.style(str(total_copied), fg='green', bold=True)}"
-        )
+            click.echo(f"  {SKIP}  {_dim(str(skipped) + ' project(s) skipped')}")
         if total_missing:
-            click.echo(
-                f"  {click.style('Missing on disk', fg='yellow')}    "
-                f"{click.style(str(total_missing), fg='yellow', bold=True)}"
-            )
+            click.echo(f"  {WARN}  {_yellow(str(total_missing) + ' files missing on disk')}")
         if total_failed:
-            click.echo(
-                f"  {click.style('Copy failures', fg='red')}      "
-                f"{click.style(str(total_failed), fg='red', bold=True)}"
-            )
+            click.echo(f"  {FAIL}  {_red(str(total_failed) + ' files failed to copy')}")
 
         if problems:
             click.echo()
-            click.echo(f"  {click.style('Projects with missing files:', fg='yellow')}")
+            click.echo(f"  {_dim('Projects with issues:')}")
             for r in problems:
                 parts = []
-                if r.missing_on_disk:
-                    parts.append(f"{len(r.missing_on_disk)} missing")
-                if r.copy_failed:
-                    parts.append(f"{len(r.copy_failed)} failed")
-                click.echo(f"    {DOT} {r.project_name}  {_dim('(' + ', '.join(parts) + ')')}")
+                if r.missing_on_disk: parts.append(f"{len(r.missing_on_disk)} missing")
+                if r.copy_failed:     parts.append(f"{len(r.copy_failed)} failed")
+                click.echo(f"     {DOT}  {r.project_name}  {_dim('(' + ', '.join(parts) + ')')}")
             click.echo()
             click.echo(
-                f"  {_dim('Tip: missing files may be on an unplugged drive or unsynced cloud folder.')}"
+                f"  {_dim('Tip:')} missing files may be on a drive that is not connected,\n"
+                f"       or a cloud folder that is not synced."
             )
 
         click.echo()
-        click.echo(f"  {_dim('Log')}  {ARROW}  {_dim(log_path.name)}")
+        click.echo(f"  {_dim('Log saved to')}  {ARROW}  {_dim(log_path.name)}")
         click.echo()
 
     run_with_error_handling(_run)
