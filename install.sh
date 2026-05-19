@@ -92,9 +92,6 @@ if ! command -v pipx &>/dev/null; then
             || python3 -m pip install --user pipx --quiet --break-system-packages
     fi
 
-    # Ensure pipx's bin dir is on PATH and add it to shell profile
-    python3 -m pipx ensurepath --quiet </dev/null 2>/dev/null || true
-
     # Add common locations to PATH for this session
     export PATH="$PATH:$HOME/.local/bin"
     export PATH="$PATH:/opt/homebrew/bin"
@@ -121,6 +118,14 @@ if ! command -v pipx &>/dev/null; then
 fi
 
 echo "  ${GREEN}✓${RESET}  pipx ready"
+
+# ── Always ensure pipx's bin dir is in PATH ──────────────────────────────────
+# This is idempotent — safe to run even if already configured.
+# It adds ~/.local/bin to the shell profile so future sessions find prpm.
+pipx ensurepath --quiet </dev/null 2>/dev/null || true
+# Also make it available in this session immediately.
+PIPX_BIN_DIR="$(pipx environment --value PIPX_BIN_DIR 2>/dev/null || echo "$HOME/.local/bin")"
+export PATH="$PATH:$PIPX_BIN_DIR"
 
 # ── Install or upgrade prpm ───────────────────────────────────────────────────
 echo "  ${YELLOW}·${RESET}  Installing prpm..."
@@ -149,5 +154,16 @@ echo ""
 echo "     cd \"/path/to/your/projects\""
 echo "     prpm run --preview"
 echo ""
-echo "  ${YELLOW}Note:${RESET} If 'prpm' is not found, close and reopen your terminal first."
-echo ""
+
+# Tell the user how to activate prpm in their current terminal.
+# (PATH changes inside a script subshell don't carry back to the parent shell.)
+if ! command -v prpm &>/dev/null; then
+    echo "  ${YELLOW}⚠${RESET}  prpm was installed but is not on your current PATH."
+    echo ""
+    echo "     Run this to use it right now:"
+    echo ""
+    echo "     ${BOLD}source ~/.zshrc${RESET}"
+    echo ""
+    echo "     Or just open a new terminal window — it will work there automatically."
+    echo ""
+fi
