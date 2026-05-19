@@ -1,0 +1,12 @@
+LICENSE
+README.md
+pyproject.toml
+prpm/__init__.py
+prpm/cli.py
+prpm/core.py
+prpm.egg-info/PKG-INFO
+prpm.egg-info/SOURCES.txt
+prpm.egg-info/dependency_links.txt
+prpm.egg-info/entry_points.txt
+prpm.egg-info/requires.txt
+prpm.egg-info/top_level.txt

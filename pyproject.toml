@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prpm"
+version = "1.0.0"
+description = "Premiere Project Manager — consolidate all project media into one folder"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = ["click>=8.0"]
+keywords = ["premiere", "video", "editing", "media", "consolidate", "archive"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Video",
+]
+
+[project.urls]
+Homepage = "https://github.com/bnsa3ed/ProjectManager"
+Repository = "https://github.com/bnsa3ed/ProjectManager"
+"Bug Tracker" = "https://github.com/bnsa3ed/ProjectManager/issues"
+
+[project.scripts]
+prpm = "prpm.cli:cli"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["prpm*"]

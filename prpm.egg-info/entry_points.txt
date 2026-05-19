@@ -1,0 +1,2 @@
+[console_scripts]
+prpm = prpm.cli:cli
