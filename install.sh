@@ -131,14 +131,16 @@ PIPX_PYTHON_FLAG=""
 REPO="git+https://github.com/bnsa3ed/ProjectManager.git"
 
 if pipx list 2>/dev/null | grep -q "prpm"; then
-    # shellcheck disable=SC2086
-    pipx install "$REPO" $PIPX_PYTHON_FLAG --force --quiet </dev/null
+    # Uninstall first — `pipx install --force` silently ignores --python,
+    # which causes uv to fail when the venv already exists.
+    pipx uninstall prpm --quiet </dev/null 2>/dev/null || true
     ACTION="upgraded"
 else
-    # shellcheck disable=SC2086
-    pipx install "$REPO" $PIPX_PYTHON_FLAG --quiet </dev/null
     ACTION="installed"
 fi
+
+# shellcheck disable=SC2086
+pipx install "$REPO" $PIPX_PYTHON_FLAG --quiet </dev/null
 
 echo "  ${GREEN}✓${RESET}  prpm $ACTION successfully"
 echo ""
