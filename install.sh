@@ -122,13 +122,15 @@ echo "  ${YELLOW}·${RESET}  Installing prpm..."
 PIPX_PYTHON_FLAG=""
 [ -n "$PIPX_PYTHON" ] && PIPX_PYTHON_FLAG="--python $PIPX_PYTHON"
 
+REPO="git+https://github.com/bnsa3ed/ProjectManager.git"
+
 if pipx list 2>/dev/null | grep -q "prpm"; then
     # shellcheck disable=SC2086
-    pipx upgrade prpm $PIPX_PYTHON_FLAG --quiet
+    pipx install "$REPO" $PIPX_PYTHON_FLAG --force --quiet
     ACTION="upgraded"
 else
     # shellcheck disable=SC2086
-    pipx install prpm $PIPX_PYTHON_FLAG --quiet
+    pipx install "$REPO" $PIPX_PYTHON_FLAG --quiet
     ACTION="installed"
 fi
 
