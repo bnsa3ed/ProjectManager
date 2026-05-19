@@ -43,19 +43,39 @@ echo "  ${GREEN}✓${RESET}  Python $PY_VER"
 # ── Install pipx if missing ──────────────────────────────────────────────────
 if ! command -v pipx &>/dev/null; then
     echo "  ${YELLOW}·${RESET}  Installing pipx..."
-    python3 -m pip install --user pipx --quiet
-    python3 -m pipx ensurepath --quiet
 
-    # Add common user bin paths to PATH for this session
+    if command -v brew &>/dev/null; then
+        # Homebrew Python blocks pip system-wide — use brew to install pipx instead
+        brew install pipx --quiet
+    else
+        python3 -m pip install --user pipx --quiet 2>/dev/null \
+            || python3 -m pip install --user pipx --quiet --break-system-packages
+    fi
+
+    # Ensure pipx's bin dir is on PATH and add it to shell profile
+    python3 -m pipx ensurepath --quiet 2>/dev/null || true
+
+    # Add common locations to PATH for this session
     export PATH="$PATH:$HOME/.local/bin"
+    export PATH="$PATH:/opt/homebrew/bin"
     export PATH="$PATH:$HOME/Library/Python/$PY_VER/bin"
     export PATH="$PATH:$HOME/Library/Python/$PY_MAJOR/bin"
 fi
 
 if ! command -v pipx &>/dev/null; then
-    echo "${RED}  ✗  Could not find pipx after installing.${RESET}"
+    echo "${RED}  ✗  Could not install pipx automatically.${RESET}"
     echo ""
-    echo "     Close and reopen your terminal, then run this installer again."
+    if command -v brew &>/dev/null; then
+        echo "  Run this and try again:"
+        echo ""
+        echo "     brew install pipx"
+        echo "     pipx install prpm"
+    else
+        echo "  Run this and try again:"
+        echo ""
+        echo "     python3 -m pip install --user pipx"
+        echo "     pipx install prpm"
+    fi
     echo ""
     exit 1
 fi
