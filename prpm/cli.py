@@ -78,27 +78,28 @@ def _make_event_handler(verbose: bool) -> tuple[list[str], callable]:
         lines.append(f"[{level.upper():12}] {msg}")
         file_log.info(f"[{level}] {msg}")
 
-        if not verbose:
-            # Compact mode: only surface warnings and errors
-            if level == "missing":
-                click.echo(f"     {WARN} {_yellow('Missing:')} {Path(msg).name}")
-            elif level == "error":
-                click.echo(f"     {FAIL} {msg}")
-            return
-
-        # Verbose: one line per file
         if level == "copied":
-            click.echo(f"     {OK} {msg}")
+            # Always show each file so the user can see progress and knows it isn't frozen.
+            # verbose adds the subfolder path; default shows just the filename.
+            if verbose:
+                click.echo(f"     {OK} {msg}")
+            else:
+                # msg from core is already just the filename or "Final/ (N files)"
+                name = msg.split("  ")[0] if "  " in msg else msg
+                click.echo(f"     {OK} {name}")
         elif level == "skipped":
-            click.echo(f"     {SKIP} {_dim('skipped:')} {msg}")
+            if verbose:
+                click.echo(f"     {SKIP} {_dim('skipped:')} {msg}")
         elif level == "missing":
-            click.echo(f"     {WARN} {_yellow('missing:')} {Path(msg).name}")
+            click.echo(f"     {WARN} {_yellow('Missing:')} {Path(msg).name}")
         elif level == "error":
             click.echo(f"     {FAIL} {msg}")
-        elif level in ("warn",):
-            click.echo(f"     {WARN} {msg}")
+        elif level == "warn":
+            if verbose:
+                click.echo(f"     {WARN} {msg}")
         elif level == "info":
-            click.echo(f"     {DOT} {_dim(msg)}")
+            if verbose:
+                click.echo(f"     {DOT} {_dim(msg)}")
 
     return lines, on_event
 
