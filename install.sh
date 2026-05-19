@@ -155,15 +155,11 @@ echo "     cd \"/path/to/your/projects\""
 echo "     prpm run --preview"
 echo ""
 
-# Tell the user how to activate prpm in their current terminal.
-# (PATH changes inside a script subshell don't carry back to the parent shell.)
-if ! command -v prpm &>/dev/null; then
-    echo "  ${YELLOW}⚠${RESET}  prpm was installed but is not on your current PATH."
-    echo ""
-    echo "     Run this to use it right now:"
-    echo ""
-    echo "     ${BOLD}source ~/.zshrc${RESET}"
-    echo ""
-    echo "     Or just open a new terminal window — it will work there automatically."
-    echo ""
-fi
+# PATH changes inside a curl|bash subshell never reach the parent terminal.
+# Print the concrete export command so the user can paste it once.
+echo "  ${YELLOW}⚠${RESET}  Run this in your terminal to activate prpm right now:"
+echo ""
+echo "     ${BOLD}export PATH=\"\$PATH:${PIPX_BIN_DIR}\"${RESET}"
+echo ""
+echo "  prpm will work automatically in all future terminal windows."
+echo ""
